@@ -29,8 +29,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	circles := RandomCirclesApproximation(m, 100000)
-
 	bounds := m.Bounds()
 	fmt.Printf(`<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
@@ -40,17 +38,33 @@ func main() {
   height="%d">
 `, 3*bounds.Max.X, bounds.Max.Y)
 
-	fmt.Fprintf(os.Stderr, "rendered chisq is %.3g\n", DiscreteObjective(RenderCircles(circles, bounds), m))
-	//fmt.Fprintf(os.Stderr, "chisq is %.3g\n", objective(EvaluateCircles(circles), m))
-	for _, c := range(circles) {
-		fmt.Print(c.SVG())
+	circles := Data{RandomCircle(m.Bounds().Max, 1).SetMean(m)}
+	simplex := CreateSimplex(circles, m)
+	for nn := 0; nn < 4; nn++ {
+		//circles = append(simplex.Data, RandomCirclesApproximation(m, 1)...)
+		circles = append(simplex.Data, RandomCircle(m.Bounds().Max, 20).SetMean(m))
+		fmt.Fprintf(os.Stderr, "I now have %d circles\n", len(circles))
+		simplex = CreateSimplex(circles, m)
+		fmt.Fprintf(os.Stderr, "first guess chisq is %.4v\n", simplex.Badnesses[0])
+		for nn:=0; nn<10; nn++ {
+			for ii := 0; ii < len(simplex.X[0]); ii++ {
+				simplex.Improve()
+			}
+			fmt.Fprintf(os.Stderr, "chisq is %.4v latest circle:\n%v",
+				simplex.Badnesses[simplex.best], simplex.Data)
+		}
 	}
+
+	rendered := image.NewNRGBA(m.Bounds())
+	circles.Render(rendered)
+	fmt.Fprintf(os.Stderr, "chisq is %.3g\n", DiscreteObjective(rendered, m))
+	fmt.Print(simplex.SVG())
 
 	file, err := os.Create("foo-rendered.png")
 	if err != nil {
 		log.Fatal(err)
 	}
-	png.Encode(file, RenderCircles(circles, bounds))
+	png.Encode(file, rendered)
 
 	fmt.Printf(`
   <image

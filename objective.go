@@ -6,21 +6,6 @@ import (
 	//"os"
 )
 
-func objective(f func(image.Point) (float64, float64, float64), i image.Image) (chisq float64) {
-	bounds := i.Bounds()
-	for y := 0; y < bounds.Max.Y; y++ {
-		for x := 0; x < bounds.Max.X; x++ {
-			ri, gi, bi, _ := i.At(x, y).RGBA()
-			r := float64(ri)/65535
-			b := float64(bi)/65535
-			g := float64(gi)/65535
-			rr, gg, bb := f(image.Point{x,y})
-			chisq += (r-rr)*(r-rr) + (g-gg)*(g-gg) + (b-bb)*(b-bb)
-		}
-	}
-	return chisq/float64(bounds.Max.Y)/float64(bounds.Max.X)
-}
-
 func DiscreteObjective(a, b image.Image) (chisq float64) {
 	bounds := a.Bounds()
 	for y := 0; y < bounds.Max.Y; y++ {
@@ -35,4 +20,10 @@ func DiscreteObjective(a, b image.Image) (chisq float64) {
 		}
 	}
 	return chisq/float64(bounds.Max.Y)/float64(bounds.Max.X)
+}
+
+func (d Data) Objective(i image.Image) (chisq float64) {
+	r := image.NewNRGBA(i.Bounds())
+	d.Render(r)
+	return DiscreteObjective(r, i)
 }
